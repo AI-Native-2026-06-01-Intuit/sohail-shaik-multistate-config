@@ -30,7 +30,3 @@ patches:
       - op: replace
         path: /data/LOGGING_LEVEL_ROOT
         value: DEBUG
-
-# DELIBERATE sync-failure test — revert in step 4c
-resources:
-  - ../../this-path-does-not-exist
