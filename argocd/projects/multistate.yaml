@@ -21,7 +21,11 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: multistate-prod
 
-  clusterResourceWhitelist: []
+  # Namespace is the only cluster-scoped kind we allow — required for
+  # CreateNamespace=true on each Application. ClusterRole/CRD/PV remain denied.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
 
   namespaceResourceWhitelist:
     - {group: "", kind: Namespace}
