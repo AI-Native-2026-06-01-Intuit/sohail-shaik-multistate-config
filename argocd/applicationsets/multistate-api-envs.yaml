@@ -48,6 +48,13 @@ spec:
       destination:
         server: "{{server}}"
         namespace: "{{namespace}}"
+      ignoreDifferences:
+        # k8s 1.35 Deployment status adds terminatingReplicas; Argo CD v2.11
+        # schema lacks it — without this, comparison fails with Unknown sync status.
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /status
       syncPolicy:
         automated:
           prune: true
