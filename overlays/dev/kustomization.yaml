@@ -26,7 +26,7 @@ patches:
     patch: |-
       - op: replace
         path: /data/SPRING_PROFILES_ACTIVE
-        value: dev
+        value: k8s
       - op: replace
         path: /data/LOGGING_LEVEL_ROOT
         value: DEBUG
