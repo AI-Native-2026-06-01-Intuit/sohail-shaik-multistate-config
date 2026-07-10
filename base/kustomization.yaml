@@ -1,0 +1,12 @@
+# base/kustomization.yaml — W5 D3 manifests shared across all overlays.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespace omitted: AppProject clusterResourceWhitelist is [] (cluster-scoped
+  # Namespace is denied). CreateNamespace=true on each Application creates it.
+  - 10-multistate-api.deployment.yaml
+  - 20-multistate-api.service.yaml
+  - 30-configmap.yaml
+  - 40-multistate-api.secret.yaml
+  - 60-multistate-api.servicemonitor.yaml

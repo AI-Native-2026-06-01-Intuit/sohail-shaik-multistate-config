@@ -1,0 +1,9 @@
+# base/00-namespace.yaml — bounded blast radius for multistate-api.
+# ResourceQuota/LimitRange omitted: AppProject namespaceResourceBlacklist
+# blocks platform-owned quota kinds; platform team applies those separately.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multistate-dev
+  labels:
+    app.kubernetes.io/part-of: multistate

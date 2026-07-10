@@ -1,0 +1,32 @@
+# overlays/staging/kustomization.yaml — staging overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: multistate-staging
+
+commonAnnotations:
+  argocd.argoproj.io/sync-wave: "0"
+
+images:
+  - name: uptimecrew/multistate-api
+    newName: uptimecrew/multistate-api
+    newTag: local-w6d2
+
+replicas:
+  - name: multistate-api
+    count: 2
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: multistate-api-config
+    patch: |-
+      - op: replace
+        path: /data/SPRING_PROFILES_ACTIVE
+        value: k8s
+      - op: replace
+        path: /data/LOGGING_LEVEL_ROOT
+        value: INFO
