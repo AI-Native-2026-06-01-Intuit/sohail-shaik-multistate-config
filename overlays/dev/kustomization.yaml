@@ -21,12 +21,6 @@ replicas:
 
 patches:
   - target:
-      kind: Namespace
-    patch: |-
-      - op: add
-        path: /metadata/annotations/argocd.argoproj.io~1sync-wave
-        value: "-1"
-  - target:
       kind: ConfigMap
       name: multistate-api-config
     patch: |-
