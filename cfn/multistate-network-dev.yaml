@@ -263,8 +263,15 @@ Resources:
       RouteTableId: !Ref PrivateRouteTableA
 
   # --- Application security group: only the app port from inside the VPC.
+  # Egress 443 to 0.0.0.0/0 is required for HTTPS access to AWS services
+  # (ECR pulls, STS tokens, Secrets Manager, CloudWatch, etc.).
   MultistateAppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W5
+            reason: "HTTPS egress to AWS APIs is required (ECR, STS, Secrets Manager, CloudWatch)"
     Properties:
       GroupName: !Sub "multistate-${EnvName}-app-sg"
       GroupDescription: App SG; ingress 8080 from VPC only; egress 443 only.

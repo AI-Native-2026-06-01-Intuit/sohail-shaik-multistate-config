@@ -39,6 +39,7 @@ Resources:
     Properties:
       Name: multistate/dev/db-master
       Description: !Sub "multistate DB master credentials, ${EnvName}."
+      KmsKeyId: alias/aws/secretsmanager
       GenerateSecretString:
         SecretStringTemplate: '{"username": "multistate_master"}'
         GenerateStringKey: password
@@ -76,6 +77,10 @@ Resources:
           SourceSecurityGroupId: !ImportValue
             Fn::Sub: "${NetworkStackName}-AppSgId"
           Description: Postgres from app SG only.
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          CidrIp: 127.0.0.1/32
+          Description: Deny all outbound (DB instances do not initiate outbound).
       Tags:
         - {Key: Name, Value: !Sub "multistate-${EnvName}-db-sg"}
 

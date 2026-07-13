@@ -52,6 +52,11 @@ Resources:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "AWS-managed key (alias/aws/s3) is sufficient for dev environment; customer-managed key not required for bootstrap templates"
     Properties:
       # Synthetic globally-unique name. AWS::AccountId disambiguates
       # across cohorts running the same stack in different accounts.
