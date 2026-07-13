@@ -112,6 +112,11 @@ Resources:
   # repo's main branch + PR workflow. NEVER a wildcard sub claim.
   CfnDeployRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit RoleName ensures stable OIDC trust relationship; GitHub Actions workflow hard-codes this role ARN for reliable OIDC federation"
     Properties:
       RoleName: multistate-api-cfn-deploy
       AssumeRolePolicyDocument:

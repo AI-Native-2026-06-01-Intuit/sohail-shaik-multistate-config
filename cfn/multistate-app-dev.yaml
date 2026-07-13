@@ -91,6 +91,11 @@ Resources:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit DBInstanceIdentifier prevents accidental resource churn on stack updates; stable name is required for connection strings and backups"
     Properties:
       DBInstanceIdentifier: !Sub "multistate-${EnvName}"
       Engine: postgres
