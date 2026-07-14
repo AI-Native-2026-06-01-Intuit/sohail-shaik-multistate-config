@@ -80,8 +80,6 @@ Resources:
             Condition:
               Bool:
                 "aws:SecureTransport": "false"
-              StringNotEquals:
-                "aws:PrincipalArn": "arn:aws:iam::742558702282:user/sohail_shaikh@intuit.com"
           - Sid: DenyUnencryptedPut
             Effect: Deny
             Principal: "*"
@@ -90,18 +88,8 @@ Resources:
             Condition:
               StringNotEquals:
                 "s3:x-amz-server-side-encryption": aws:kms
-                "aws:PrincipalArn": "arn:aws:iam::742558702282:user/sohail_shaikh@intuit.com"
-          - Sid: AllowTraineeUpload
-            Effect: Allow
-            Principal:
-              AWS: "arn:aws:iam::742558702282:user/sohail_shaikh@intuit.com"
-            Action:
-              - s3:GetObject
-              - s3:PutObject
-              - s3:ListBucket
-            Resource:
-              - !GetAtt MultistateArtifactsBucket.Arn
-              - !Sub "${MultistateArtifactsBucket.Arn}/*"
+          # Manual uploads use bootstrap CfnDeployRole (same principal as CI),
+          # not a personal IAM-user bypass of TLS / encryption denials.
 
 Outputs:
   ArtefactBucketName:
