@@ -78,6 +78,11 @@ Resources:
   # bedrock:* and never Resource: '*'.
   BedrockInvokeRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit RoleName is required for IRSA service-account annotation and BudgetsAction role targeting; replacement churn would break pod identity"
     Properties:
       RoleName: multistate-bedrock-invoke
       AssumeRolePolicyDocument:
@@ -131,6 +136,11 @@ Resources:
   # X-Llm-Disabled-Reason: budget_cap, not a generic 500.
   BedrockDenyOnBudget:
     Type: AWS::IAM::ManagedPolicy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit ManagedPolicyName is referenced by BudgetsAction and BudgetActionRole ArnEquals condition; must stay stable across updates"
     Properties:
       ManagedPolicyName: MultistateBedrockDenyPolicy
       Description: Explicit-deny Bedrock invoke; attached by BudgetsAction at 100% actual.
@@ -151,6 +161,11 @@ Resources:
   # silent-pipeline-death failure mode).
   CostPerRequestAlarm:
     Type: AWS::CloudWatch::Alarm
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit AlarmName matches the deliverable contract (describe-alarms / spike evidence); stable name required for ops runbooks"
     Properties:
       AlarmName: multistate/cost-per-request-dev
       AlarmDescription: 15-minute moving average CostUsd > 0.005 USD/call.
@@ -184,6 +199,11 @@ Resources:
   # to the IRSA role). Trust principal is the AWS Budgets service.
   BudgetActionRole:
     Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit RoleName keeps Budgets ExecutionRoleArn stable; replacement would break the AUTOMATIC deny-attach action"
     Properties:
       RoleName: !Sub "multistate-budget-action-${EnvName}"
       AssumeRolePolicyDocument:
