@@ -163,6 +163,9 @@ Resources:
       Threshold: 0.005
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: breaching
+      # Metric math AVG() aggregates *across* time series (e.g. SEARCH),
+      # not over time — AVG(m1) on a single MetricStat is invalid.
+      # 15-minute window = Period 300 × EvaluationPeriods 3 above.
       Metrics:
         - Id: m1
           MetricStat:
@@ -174,10 +177,6 @@ Resources:
                 - {Name: feature, Value: summarize-nexus}
             Period: 300
             Stat: Average
-          ReturnData: false
-        - Id: e1
-          Expression: "AVG(m1)"
-          Label: "15m average CostUsd"
           ReturnData: true
 
   # --- The IAM role the BudgetsAction itself assumes (not the
@@ -222,9 +221,11 @@ Resources:
           Amount: !Ref MonthlyBudgetUsd
           Unit: USD
         CostFilters:
+          # Budgets TagKeyValue must be user:tagKey$tagValue (not user:tagKeyvalue).
+          # Fn::Sub: $$ → literal $, then ${EnvName} substitutes → user:env$dev.
           TagKeyValue:
-            - !Sub "user:service$multistate"
-            - !Sub "user:env${EnvName}"
+            - "user:service$multistate"
+            - !Sub "user:env$${EnvName}"
       NotificationsWithSubscribers:
         # Early warning at forecasted 80%: emails finance via SNS.
         - Notification:
