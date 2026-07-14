@@ -224,7 +224,7 @@ Resources:
         CostFilters:
           TagKeyValue:
             - !Sub "user:service$multistate"
-            - !Sub "user:env$${EnvName}"
+            - !Sub "user:env${EnvName}"
       NotificationsWithSubscribers:
         # Early warning at forecasted 80%: emails finance via SNS.
         - Notification:
@@ -259,16 +259,17 @@ Resources:
       ActionType: APPLY_IAM_POLICY
       ApprovalModel: AUTOMATIC
       ExecutionRoleArn: !GetAtt BudgetActionRole.Arn
+      # CFN registry shape (not older ActionThresholdType / SubscriptionType).
       ActionThreshold:
-        ActionThresholdType: PERCENTAGE
-        ActionThresholdValue: 100
+        Type: PERCENTAGE
+        Value: 100
       Definition:
         IamActionDefinition:
           PolicyArn: !Ref BedrockDenyOnBudget
           Roles:
             - !Ref BedrockInvokeRole
       Subscribers:
-        - SubscriptionType: SNS
+        - Type: SNS
           Address: !Ref CostAlarmsTopic
 
   # --- Cost and Usage Report destination bucket. PAB x4, KMS
