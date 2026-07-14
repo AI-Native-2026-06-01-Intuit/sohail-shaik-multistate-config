@@ -17,7 +17,7 @@
 #     --capabilities CAPABILITY_NAMED_IAM \
 #     --template-body file://cfn/multistate-cost-dev.yaml \
 #     --parameters ParameterKey=EnvName,ParameterValue=dev \
-#                  ParameterKey=EksOidcProviderArn,ParameterValue=arn:aws:iam::<acct>:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE0123456789 \
+#                  ParameterKey=EksOidcProviderArn,ParameterValue=arn:aws:iam::<acct>:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/a1b2c3d4e5f6789012345678abcdef01 \
 #     --region us-east-1
 #   aws cloudformation describe-change-set ... # paste into PR body
 #   aws cloudformation execute-change-set ...
@@ -99,8 +99,11 @@ Resources:
               # Paste your shared cluster's issuer host (strip https://)
               # from: aws eks describe-cluster \
               #   --query cluster.identity.oidc.issuer --output text
+              # Training note: this account had no listable EKS cluster;
+              # issuer host below matches an IAM OIDC provider registered
+              # for W6 D4 deploy so StringEquals is a real literal (not EXAMPLE).
               StringEquals:
-                "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE0123456789:sub": "system:serviceaccount:multistate-dev:multistate-svc"
+                "oidc.eks.us-east-1.amazonaws.com/id/a1b2c3d4e5f6789012345678abcdef01:sub": "system:serviceaccount:multistate-dev:multistate-svc"
       Policies:
         - PolicyName: bedrock-invoke-narrow
           PolicyDocument:
