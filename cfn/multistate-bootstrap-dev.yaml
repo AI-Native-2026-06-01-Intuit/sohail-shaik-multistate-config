@@ -36,11 +36,11 @@ Parameters:
     Description: NoncurrentVersionExpiration in days (lifecycle rule).
   GitHubOrg:
     Type: String
-    Default: uptimecrew
+    Default: AI-Native-2026-06-01-Intuit
     Description: GitHub org that hosts the W6 D1 OIDC role's repo.
   GitHubRepo:
     Type: String
-    Default: multistate-config
+    Default: sohail-shaik-multistate-config
     Description: Repo (the W6 D2 gitops config repo).
 
 Resources:
@@ -152,13 +152,17 @@ Resources:
                   - cloudformation:DescribeStackEvents
                   - cloudformation:DescribeStackResources
                   - cloudformation:GetTemplate
-                  - cloudformation:ValidateTemplate
                   - cloudformation:DetectStackDrift
                   - cloudformation:DescribeStackDriftDetectionStatus
                   - cloudformation:DescribeStackResourceDrifts
                 Resource:
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/multistate-*"
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:changeSet/multistate-*"
+              # ValidateTemplate is not stack-scoped; IAM requires Resource: "*".
+              - Sid: ValidateTemplateAny
+                Effect: Allow
+                Action: cloudformation:ValidateTemplate
+                Resource: "*"
               # S3 read on the bootstrap bucket (for stored templates).
               - Sid: BootstrapBucketRead
                 Effect: Allow

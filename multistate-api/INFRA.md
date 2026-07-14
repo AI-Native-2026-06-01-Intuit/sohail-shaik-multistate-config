@@ -84,9 +84,38 @@ aws cloudformation describe-stack-resource-drifts \
   --region us-east-1
 ```
 
-Expected flow: drift detection starts, runs within 30 seconds, returns DRIFTED if live resources were manually edited in the console, or IN_SYNC if they match the template. A revert (re-running the ChangeSet flow with the original template) brings IN_SYNC status back.
+Expected flow: drift detection starts, runs within 30 seconds, returns DRIFTED if live resources were manually edited in the console, or IN_SYNC if they match the template. Reverting the live edit brings IN_SYNC status back.
 
-In practice: the artifacts bucket (multistate-artifacts-dev) was verified as IN_SYNC. No manual console edits had drifted it from the template.
+### Real drift demo (2026-07-14, `multistate-artifacts-dev`)
+
+Deliberately flipped `PublicAccessBlockConfiguration.RestrictPublicBuckets` from `true` → `false` on the live artefacts bucket, detected drift, then restored all four PAB toggles.
+
+**DRIFTED** (after live edit):
+
+```json
+{
+  "StackDriftDetectionId": "9db436b0-7fa9-11f1-aeb6-0e868bfe7efd",
+  "StackDriftStatus": "DRIFTED",
+  "DetectionStatus": "DETECTION_COMPLETE",
+  "DriftedStackResourceCount": 1,
+  "Timestamp": "2026-07-14T17:29:49.723000+00:00"
+}
+```
+
+Resource drift: `MultistateArtifactsBucket` `MODIFIED` —  
+`/PublicAccessBlockConfiguration/RestrictPublicBuckets` expected `true`, actual `false`.
+
+**IN_SYNC** (after restore):
+
+```json
+{
+  "StackDriftDetectionId": "a2e2d010-7fa9-11f1-b529-0affd6f3713f",
+  "StackDriftStatus": "IN_SYNC",
+  "DetectionStatus": "DETECTION_COMPLETE",
+  "DriftedStackResourceCount": 0,
+  "Timestamp": "2026-07-14T17:29:58.417000+00:00"
+}
+```
 
 ## Hardening patterns applied
 
@@ -112,9 +141,9 @@ In practice: the artifacts bucket (multistate-artifacts-dev) was verified as IN_
 
 ### IAM (CFN-deploy role)
 - **OIDC trust policy**: Assumes via `sts:AssumeRoleWithWebIdentity` against `token.actions.githubusercontent.com`.
-- **Sub claim scoping**: Uses `StringLike` (not `StringEquals`) because GitHub OIDC sub claims vary per workflow run. Pinned to the specific gitops repo (`repo:uptimecrew/multistate-config:*`).
+- **Sub claim scoping**: Uses `StringLike` (not `StringEquals`) because GitHub OIDC sub claims vary per workflow run. Pinned to the specific gitops repo (`repo:AI-Native-2026-06-01-Intuit/sohail-shaik-multistate-config` (main + pull_request)).
 - **Aud claim scoping**: Uses `StringEquals` for `sts.amazonaws.com` (exact match).
-- **Permission policy**: Enumerates twelve specific CloudFormation actions (create/describe/execute ChangeSet, describe stacks, detect drift, etc.) on `arn:aws:cloudformation:*:*:stack/multistate-*` only. No `Action: '*'`.
+- **Permission policy**: Enumerates CloudFormation ChangeSet/stack/drift actions on `arn:aws:cloudformation:*:*:stack/multistate-*` only. `ValidateTemplate` is a separate statement with `Resource: "*"` (that API is not stack-scoped). No wildcard service `Action: '*'`.
 
 ## cfn-author Skill audit notes
 
@@ -130,7 +159,7 @@ Ran the `cfn-author` Claude Skill (via `/cfn-author multistate --region us-east-
 
 ### Rejected / corrected suggestions
 
-1. **OIDC trust policy claim conditions**: The Skill initially scaffolded the sub claim with `StringLike: "token.actions.githubusercontent.com:sub": "repo:uptimecrew/multistate-config:*"`. This is correct (GitHub OIDC sub claims vary per run), but the Skill sometimes pairs this with `StringLike` on the `aud` claim where `StringEquals` is required. The human-authored template uses `StringEquals` on `aud` (exact match to `sts.amazonaws.com`) and `StringLike` on `sub` (allows branch/PR refs to vary).
+1. **OIDC trust policy claim conditions**: The Skill initially scaffolded the sub claim with `StringLike: "token.actions.githubusercontent.com:sub": "repo:AI-Native-2026-06-01-Intuit/sohail-shaik-multistate-config:…"`. This is correct (GitHub OIDC sub claims vary per run), but the Skill sometimes pairs this with `StringLike` on the `aud` claim where `StringEquals` is required. The human-authored template uses `StringEquals` on `aud` (exact match to `sts.amazonaws.com`) and `StringLike` on `sub` (allows branch/PR refs to vary).
 
 2. **Lifecycle rules in artifacts bucket**: The Skill proposed a single lifecycle rule expiring noncurrent versions. The human-authored template adds tiering: noncurrent versions expire at 90d, but live objects tier to STANDARD_IA at 90d and GLACIER_IR at 365d. This is an operational choice (cost optimization over immediate expiry) that the Skill doesn't capture — the Skill defaults to expire-only.
 

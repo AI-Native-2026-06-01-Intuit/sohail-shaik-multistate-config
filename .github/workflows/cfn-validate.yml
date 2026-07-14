@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read          # checkout
+  id-token: write         # OIDC for aws cli
 
 jobs:
   validate:
@@ -38,11 +39,11 @@ jobs:
       - name: cfn-nag
         run: cfn_nag_scan --input-path cfn --output-format txt --fail-on-warnings
 
-      - name: Configure AWS credentials (ambient)
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::742558702282:role/multistate-api-cfn-deploy
+          aws-region: us-east-1
 
       - name: aws cloudformation validate-template (bootstrap)
         run: |
