@@ -117,6 +117,8 @@ Resources:
         rules_to_suppress:
           - id: W28
             reason: "Explicit RoleName ensures stable OIDC trust relationship; GitHub Actions workflow hard-codes this role ARN for reliable OIDC federation"
+          - id: W11
+            reason: "cloudformation:ValidateTemplate is not stack-scoped; IAM requires Resource '*'. Scoped to that one Action only (CfnStackOps stays on multistate-* stacks)"
     Properties:
       RoleName: multistate-api-cfn-deploy
       AssumeRolePolicyDocument:
