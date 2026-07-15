@@ -16,4 +16,6 @@ spec:
   minAvailable: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: multistate-api
+      # Matches overlays/dev patch that sets label app=multistate-api
+      # (also keeps app.kubernetes.io/name on the base Deployment).
+      app: multistate-api

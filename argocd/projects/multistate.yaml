@@ -26,6 +26,11 @@ spec:
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    # W6 D5 — Karpenter NodePool is cluster-scoped; allow if a
+    # separate Application syncs k8s/karpenter/ (otherwise apply
+    # via kubectl apply -f k8s/karpenter/multistate-mixed.yaml).
+    - group: karpenter.sh
+      kind: NodePool
 
   namespaceResourceWhitelist:
     - {group: "", kind: Namespace}

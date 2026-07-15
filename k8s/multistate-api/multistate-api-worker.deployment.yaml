@@ -25,6 +25,15 @@ spec:
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: multistate
     spec:
+      # Same NodePool taint as the API Deployment so workers
+      # pack onto multistate-mixed Spot/On-Demand capacity.
+      nodeSelector:
+        workload: multistate-api
+      tolerations:
+        - key: workload
+          operator: Equal
+          value: multistate-api
+          effect: NoSchedule
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
