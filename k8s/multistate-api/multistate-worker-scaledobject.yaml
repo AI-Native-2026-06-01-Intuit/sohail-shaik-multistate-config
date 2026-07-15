@@ -1,0 +1,60 @@
+# k8s/multistate-api/multistate-worker-scaledobject.yaml
+# TASK 1: KEDA ScaledObject + TriggerAuthentication.
+# Binds the multistate-api-worker Deployment to the
+# multistate-nexus-jobs-dev queue. queueLength: "10" means the
+# generated HPA targets 10 messages per pod; 73 pending
+# messages scale to ceil(73/10) = 8 pods.
+#
+# Credentials live in TriggerAuthentication (NOT in the
+# ScaledObject metadata block -- inlining leaks them into
+# the manifest). podIdentity.provider: aws +
+# identityOwner: operator means KEDA reuses the operator's
+# IRSA-bound role to read SQS; workload pods never need
+# SQS read permission. Section 9 sticking point #1 covers
+# the symmetric trap on HPA.
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: multistate-api-aws-auth
+  namespace: multistate-dev
+spec:
+  podIdentity:
+    provider: aws
+    identityOwner: operator
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: multistate-worker-scaledobject
+  namespace: multistate-dev
+spec:
+  scaleTargetRef:
+    name: multistate-api-worker
+  # Scale-to-zero is on (minReplicaCount: 0); the queue
+  # drains overnight, the worker scales to zero, and the
+  # next-day spike pays one cold-start in exchange for
+  # ~80% off the off-hours bill. The Topic-7 scale-to-zero
+  # economics table covers when this is and isn't safe.
+  minReplicaCount: 0
+  maxReplicaCount: 28
+  # pollingInterval mirrors the W5D3 HPA cadence so the
+  # two scalers (HPA on the api Deployment, KEDA on the
+  # worker) reach equilibrium on the same clock.
+  pollingInterval: 15
+  cooldownPeriod:  300
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        # Account 742558702282 is the cohort AWS account (aws sts get-caller-identity).
+        queueURL: https://sqs.us-east-1.amazonaws.com/742558702282/multistate-nexus-jobs-dev
+        queueLength: "10"
+        awsRegion: us-east-1
+        # ApproximateNumberOfMessages: the SQS-visible
+        # depth (does NOT include in-flight). For the
+        # in-flight-aware variant, set
+        # scaleOnInFlight: "true" -- defaults vary by
+        # operator version; verify on the cohort cluster.
+        identityOwner: operator
+      authenticationRef:
+        name: multistate-api-aws-auth

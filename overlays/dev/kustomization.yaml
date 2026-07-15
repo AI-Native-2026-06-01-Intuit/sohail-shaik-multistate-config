@@ -1,9 +1,13 @@
-# overlays/dev/kustomization.yaml — dev overlay (smallest patch over W5 D3 base).
+# overlays/dev/kustomization.yaml — dev overlay (W5 D3 base + W6 D5 scaling).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
 - ../../base
+# W6 D5 — scaling / tracing (synced into multistate-dev)
+- ../../k8s/multistate-api
+# Note: k8s/karpenter/multistate-mixed.yaml is cluster-scoped;
+# apply separately (kubectl / platform App) — not in this overlay.
 
 namespace: multistate-dev
 
@@ -15,9 +19,9 @@ images:
   newName: uptimecrew/multistate-api
   newTag: 12d1208ec9265e1841e9c0b1206fdd9a63c64a46
 
-replicas:
-- count: 1
-  name: multistate-api
+# HPA owns replica count (minReplicas: 3). Do NOT pin replicas
+# here — a Kustomize replicas: 1 fights the HPA and flaps the
+# Deployment during Argo sync (W6 D5 rubric Done-when).
 
 patches:
 - patch: |-
@@ -30,3 +34,34 @@ patches:
   target:
     kind: ConfigMap
     name: multistate-api-config
+# Tolerations + label so API pods can land on the
+# multistate-mixed Karpenter NodePool (taint workload=multistate-api).
+- target:
+    kind: Deployment
+    name: multistate-api
+  patch: |-
+    - op: add
+      path: /metadata/labels/app
+      value: multistate-api
+    - op: add
+      path: /spec/template/metadata/labels/app
+      value: multistate-api
+    - op: add
+      path: /spec/template/spec/tolerations
+      value:
+        - key: workload
+          operator: Equal
+          value: multistate-api
+          effect: NoSchedule
+    - op: add
+      path: /spec/template/spec/nodeSelector
+      value:
+        workload: multistate-api
+# Seed replicas at HPA floor before the HPA controller attaches.
+- target:
+    kind: Deployment
+    name: multistate-api
+  patch: |-
+    - op: replace
+      path: /spec/replicas
+      value: 3

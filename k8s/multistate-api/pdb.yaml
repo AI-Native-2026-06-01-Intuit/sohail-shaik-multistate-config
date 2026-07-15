@@ -1,0 +1,21 @@
+# k8s/multistate-api/pdb.yaml
+# TASK 2: PodDisruptionBudget for multistate-api.
+# Paired with the Karpenter NodePool — the NodePool
+# does the packing, the PDB stops a Spot-reclaim wave from
+# taking the floor below the HPA minReplicas.
+#
+# Rubric: minAvailable: 2 (matches HPA minReplicas floor).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: multistate-api-pdb
+  namespace: multistate-dev
+spec:
+  # minAvailable: 2 keeps at least the HPA floor alive
+  # during simultaneous Spot reclaims / Karpenter consolidation.
+  minAvailable: 2
+  selector:
+    matchLabels:
+      # Matches overlays/dev patch that sets label app=multistate-api
+      # (also keeps app.kubernetes.io/name on the base Deployment).
+      app: multistate-api

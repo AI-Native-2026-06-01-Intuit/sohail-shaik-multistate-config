@@ -1,0 +1,65 @@
+# k8s/karpenter/multistate-mixed.yaml
+# TASK 2: Karpenter NodePool with Spot + On-Demand mix.
+# Paired with the PDB in k8s/multistate-api/pdb.yaml —
+# the NodePool does the packing, the PDB stops a Spot-reclaim
+# wave from taking the floor below HPA minReplicas.
+#
+# Section 9 sticking point #2 covers the cluster-wide
+# failure mode a missing PDB enables (a regional Spot
+# price move reclaiming 60% of the pool over 90 seconds
+# without a PDB drains the floor and pages on-call).
+#
+# Cluster-scoped: apply via kubectl / platform Argo app
+# (AppProject destinations are namespace-scoped for the
+# multistate-api Application).
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: multistate-mixed
+spec:
+  template:
+    metadata:
+      labels:
+        workload: multistate-api
+    spec:
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          # Mixed pool: Karpenter picks Spot when available
+          # and falls back to On-Demand on a Spot
+          # interruption signal. The PDB below stops a
+          # wave of reclaims taking the floor down at once.
+          values: ["spot", "on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          # Task allows c7g or m7g; m5/m6i kept as cohort-
+          # friendly fallbacks when Graviton capacity is thin.
+          values: ["c7g.large", "c7g.xlarge", "m7g.large", "m5.large", "m5.xlarge", "m6i.large"]
+        - key: topology.kubernetes.io/zone
+          operator: In
+          # Three AZs spreads the Spot risk: a single-AZ
+          # Spot price move is the single biggest cause
+          # of correlated reclaims; multi-AZ caps it.
+          values: ["us-east-1a", "us-east-1b", "us-east-1c"]
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        # Platform-owned EC2NodeClass (cohort default).
+        name: default
+      taints:
+        - key: workload
+          value: multistate-api
+          effect: NoSchedule
+  disruption:
+    # Underutilised nodes are evicted; the workload
+    # re-packs onto fewer nodes. Bin packing saves real
+    # money: EKS bills per node, not per pod.
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    # 10 minutes mirrors the HPA scale-down stabilization;
+    # both timers in lockstep so the cluster doesn't churn
+    # nodes on a transient dip.
+    consolidateAfter: 600s
+  limits:
+    cpu:    "200"
+    memory: 400Gi

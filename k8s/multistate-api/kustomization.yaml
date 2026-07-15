@@ -1,0 +1,10 @@
+# k8s/multistate-api/kustomization.yaml — W6 D5 scaling / tracing resources.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - multistate-api-worker.deployment.yaml
+  - multistate-worker-scaledobject.yaml
+  - adot-collector.yaml
+  - hpa.yaml
+  - pdb.yaml
