@@ -1,4 +1,4 @@
-# sohail-shaik-multistate-config — GitOps manifests for multistate-api (W6 D2).
+# sohail-shaik-multistate-config — GitOps manifests for multistate-api (W6 D2–D4).
 
 Kustomize overlays and Argo CD CRs for the multistate capstone. The application repo (`sohail-shaik-multi-state`) builds images; this repo is the single source of truth for what runs in-cluster.
 
@@ -10,6 +10,7 @@ Kustomize overlays and Argo CD CRs for the multistate capstone. The application 
 - `argocd/applications/multistate-api-dev.yaml` — dev Application anchor
 - `argocd/applicationsets/multistate-api-envs.yaml` — matrix fan-out
 - `argocd-system/notifications-cm.yaml` — Slack triggers (failures only)
+- `cfn/` — CloudFormation stacks (bootstrap, network, app, artifacts, **cost** / W6 D4)
 
 ## Apply order (bootstrap)
 
