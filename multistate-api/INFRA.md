@@ -2,12 +2,13 @@
 
 How this service's AWS substrate is provisioned and what deviated from the cfn-author Skill's defaults.
 
-## Stack layout (after W6 D3)
+## Stack layout (after W6 D4)
 
 - **multistate-bootstrap-dev** — bootstrap stack (Task 1): bootstrap S3 bucket for templates + CFN-deploy IAM role for GitHub Actions to assume via OIDC.
 - **multistate-artifacts-dev** — hardened S3 artefact bucket (Task 3): KMS, PAB, lifecycle (90d → STANDARD_IA, 365d → GLACIER_IR), deny-non-TLS, Retain x2 on both policies.
 - **multistate-network-dev** — 3-AZ VPC, 6 subnets (public + private), IGW, 1-3 NAT GWs (Conditions-gated by EnvName), application security group (Task 2).
 - **multistate-app-dev** — RDS Postgres + DB SG + DB subnet group + Secrets Manager master credentials (Task 3).
+- **multistate-cost-dev** — Bedrock IRSA + SNS cost alarms + CloudWatch alarm (`TreatMissingData: breaching`) + monthly Budget/BudgetsAction + CUR bucket (W6 D4).
 
 ## Deploy order
 
