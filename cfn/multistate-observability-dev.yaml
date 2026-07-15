@@ -1,0 +1,50 @@
+# cfn/multistate-observability-dev.yaml
+# TASK 1 observability stack: X-Ray sampling rule deployed
+# through CFN, NOT the X-Ray console -- same IaC discipline
+# from W6 D3. ReservoirSize: 10 floors the
+# rate at 10 traces per second so a slow
+# Sunday still captures the first traces of an emerging
+# incident; FixedRate: 0.05 adds
+# 5 percent of everything above the floor.
+#
+# Section 9 sticking point #1 covers the FixedRate: 0
+# failure mode the lesson's Topic-4 ai_practice rejects.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: multistate observability stack -- X-Ray sampling rule.
+
+Parameters:
+  EnvName:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+Resources:
+  multistateSamplingRule:
+    Type: AWS::XRay::SamplingRule
+    Properties:
+      SamplingRule:
+        # RuleName + Priority make the rule deterministic.
+        # Lower Priority wins; service-specific rules at
+        # Priority: 1000 stay above the catch-all default
+        # (which CFN-deploys at a different priority).
+        RuleName: multistate-api-default
+        Priority: 1000
+        ReservoirSize: 10
+        FixedRate: 0.05
+        ServiceName: multistate-api
+        ServiceType: "*"
+        Host: "*"
+        HTTPMethod: "*"
+        URLPath: "*"
+        ResourceARN: "*"
+        Version: 1
+      Tags:
+        - {Key: service, Value: multistate}
+        - {Key: env,     Value: !Ref EnvName}
+        - {Key: tenant,  Value: shared}
+        - {Key: feature, Value: summarize-nexus}
+
+Outputs:
+  SamplingRuleArn:
+    Value: !GetAtt multistateSamplingRule.RuleARN
+    Export: {Name: !Sub "${AWS::StackName}-SamplingRuleArn"}

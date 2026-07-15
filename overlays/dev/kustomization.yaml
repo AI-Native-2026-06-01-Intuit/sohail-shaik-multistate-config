@@ -4,6 +4,10 @@ kind: Kustomization
 
 resources:
 - ../../base
+# W6 D5 — scaling / tracing (synced into multistate-dev)
+- ../../k8s/multistate-api
+# Note: k8s/karpenter/multistate-mixed.yaml is cluster-scoped;
+# apply separately (kubectl / platform App) — not in this overlay.
 
 namespace: multistate-dev
 

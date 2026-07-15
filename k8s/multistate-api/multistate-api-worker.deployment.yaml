@@ -1,0 +1,52 @@
+# k8s/multistate-api/multistate-api-worker.deployment.yaml
+# Worker Deployment targeted by the KEDA ScaledObject.
+# Starts at 0 replicas; KEDA scales on SQS depth.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multistate-api-worker
+  namespace: multistate-dev
+  labels:
+    app: multistate-api-worker
+    app.kubernetes.io/name: multistate-api-worker
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: multistate
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: multistate-api-worker
+  template:
+    metadata:
+      labels:
+        app: multistate-api-worker
+        app.kubernetes.io/name: multistate-api-worker
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: multistate
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      containers:
+        - name: worker
+          # Same image family as the API; worker profile consumes nexus jobs.
+          image: uptimecrew/multistate-api:local-w6d2
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: multistate-api-config
+            - secretRef:
+                name: multistate-api-secrets
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: k8s,worker
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi

@@ -39,6 +39,11 @@ spec:
     - {group: networking.k8s.io, kind: NetworkPolicy}
     - {group: monitoring.coreos.com, kind: ServiceMonitor}
     - {group: monitoring.coreos.com, kind: PrometheusRule}
+    # W6 D5 — KEDA event-driven scaling (Task 1)
+    - {group: keda.sh, kind: ScaledObject}
+    - {group: keda.sh, kind: TriggerAuthentication}
+    # W6 D5 — ADOT collector CR (Task 1)
+    - {group: opentelemetry.io, kind: OpenTelemetryCollector}
 
   namespaceResourceBlacklist:
     - {group: "", kind: ResourceQuota}

@@ -1,0 +1,81 @@
+# k8s/multistate-api/adot-collector.yaml
+# TASK 1 ADOT collector: dual-export OTLP to the W5D5
+# Tempo endpoint AND to the X-Ray ingestion endpoint via
+# the awsxray exporter. The application's OTel SDK keeps
+# its W5D5 config (one OTLP endpoint); switching sinks is
+# a collector-config change, not an app change.
+#
+# Namespace: multistate-dev (Done-when + AppProject destinations).
+# Tempo still lives in platform-svc; we export across namespace DNS.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: adot-collector-sa
+  namespace: multistate-dev
+  annotations:
+    # IRSA: this SA's role carries xray:PutTraceSegments
+    # on Resource: "*" (X-Ray uses ingestion endpoints
+    # not per-resource ARNs). Separate from the W6D4
+    # Bedrock role; never combine.
+    eks.amazonaws.com/role-arn: arn:aws:iam::742558702282:role/adot-collector-xray-write
+---
+apiVersion: opentelemetry.io/v1alpha1
+kind: OpenTelemetryCollector
+metadata:
+  name: adot-collector
+  namespace: multistate-dev
+  labels:
+    app: adot-collector
+spec:
+  image: public.ecr.aws/aws-observability/aws-otel-collector:0.40.0
+  serviceAccount: adot-collector-sa
+  mode: deployment
+  replicas: 1
+  config: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch:
+        # 5-second batch window keeps emission cost low
+        # without holding spans past the on-call's patience.
+        timeout: 5s
+      attributes/sanitise:
+        actions:
+          # Drop high-cardinality request bodies before
+          # forward; W5D5 PII-redaction callback.
+          - key: http.request.body
+            action: delete
+
+    exporters:
+      # Tempo sink: OTLP-HTTP into the in-cluster Tempo
+      # distributor (W5D5 platform-svc).
+      otlphttp/tempo:
+        endpoint: http://tempo-distributor.platform-svc:4318
+        tls:
+          insecure: true
+      # X-Ray sink: awsxray exporter translates OTel
+      # spans into X-Ray segment format. The 16-byte OTel
+      # trace ID is preserved through the translation so
+      # a Tempo trace ID pastes into the X-Ray console
+      # and lands on the same trace.
+      awsxray:
+        region: us-east-1
+        indexed_attributes:
+          - service
+          - tenant
+          - feature
+
+    service:
+      pipelines:
+        traces:
+          receivers:  [otlp]
+          processors: [batch, attributes/sanitise]
+          # Dual-export: one pipeline, two exporters.
+          exporters:  [otlphttp/tempo, awsxray]
