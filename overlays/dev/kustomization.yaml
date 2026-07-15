@@ -13,7 +13,7 @@ commonAnnotations:
 images:
 - name: uptimecrew/multistate-api
   newName: uptimecrew/multistate-api
-  newTag: 92fff5e91643aa8abbb9576a1e0a01b3dfd32fed
+  newTag: 12d1208ec9265e1841e9c0b1206fdd9a63c64a46
 
 replicas:
 - count: 1
