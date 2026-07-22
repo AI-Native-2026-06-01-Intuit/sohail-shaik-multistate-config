@@ -14,10 +14,19 @@ kubectl apply -f argocd/applications/multistate-agent-svc-dev.yaml -n argocd
 argocd app sync multistate-agent-svc
 argocd app get multistate-agent-svc
 
+# IAM substrate (works without budgets:ModifyBudget):
+aws cloudformation deploy \
+  --stack-name multistate-agent-svc-iam-sohail \
+  --template-file cfn/multistate-agent-anthropic-monthly.yaml \
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides IncludeBudget=false
+
+# Full $4000 budget + AUTOMATIC BudgetsAction (needs budgets:ModifyBudget):
 aws cloudformation deploy \
   --stack-name multistate-agent-anthropic-monthly \
   --template-file cfn/multistate-agent-anthropic-monthly.yaml \
-  --capabilities CAPABILITY_NAMED_IAM
+  --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides IncludeBudget=true
 ```
 
 ## Week 6 Day 5 — Observability, Cost Management & Auto-Scaling
