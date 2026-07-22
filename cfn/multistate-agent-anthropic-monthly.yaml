@@ -33,6 +33,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: multistate-agent-anthropic-budget
+      KmsMasterKeyId: alias/aws/sns
       Tags:
         - {Key: ServiceName, Value: multistate-agent-svc}
 
@@ -51,6 +52,8 @@ Resources:
         rules_to_suppress:
           - id: W13
             reason: "Explicit deny on llm-proxy / bedrock at budget breach; Resource * is intentional for hard stop"
+          - id: W28
+            reason: "Explicit ManagedPolicyName is referenced by BudgetsAction and BudgetActionRole ArnEquals condition; must stay stable across updates"
     Properties:
       ManagedPolicyName: DenyLlmProxyInvoke
       Description: Explicit-deny llm-proxy invoke; attached by BudgetsAction at 100% actual.
