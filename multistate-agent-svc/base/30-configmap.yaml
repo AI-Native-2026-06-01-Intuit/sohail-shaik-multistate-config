@@ -1,0 +1,21 @@
+# multistate-agent-svc/base/30-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multistate-agent-svc-config
+  namespace: multistate-svc
+  labels:
+    app.kubernetes.io/name: multistate-agent-svc
+data:
+  MULTISTATE_AGENT_HOST: "0.0.0.0"
+  MULTISTATE_AGENT_PORT: "8080"
+  LANGSMITH_PROJECT: "multistate-agent-svc-dev"
+  RERANKER: "bge-reranker-base"
+  RAGAS_SAMPLE_RATE: "0.01"
+  MULTISTATE_AGENT_COST_CEILING_E5: "25000"
+  # Dev overlay boots in stub mode until live Anthropic + MCP are wired.
+  MULTISTATE_AGENT_STUB_LLM: "1"
+  MULTISTATE_AGENT_SKIP_MCP: "1"
+  # Override in-cluster via Secret / external overlay as needed.
+  MULTISTATE_AGENT_MCP_SSE_URL: "http://multistate-mcp-server.multistate-dev.svc.cluster.local:8080/sse"
+  MULTISTATE_AGENT_REDIS_URL: "redis://redis.multistate-dev.svc.cluster.local:6379/0"

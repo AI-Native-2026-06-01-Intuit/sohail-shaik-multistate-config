@@ -1,0 +1,74 @@
+# multistate-agent-svc/base/10-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multistate-agent-svc
+  namespace: multistate-svc
+  labels:
+    app: multistate-agent-svc
+    app.kubernetes.io/name: multistate-agent-svc
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/part-of: multistate
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multistate-agent-svc
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: multistate-agent-svc
+        app.kubernetes.io/name: multistate-agent-svc
+        app.kubernetes.io/component: agent
+        app.kubernetes.io/part-of: multistate
+    spec:
+      serviceAccountName: multistate-agent-svc
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      containers:
+        - name: multistate-agent-svc
+          image: uptimecrew/multistate-agent-svc:pending
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: multistate-agent-svc-config
+            - secretRef:
+                name: multistate-agent-svc-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3

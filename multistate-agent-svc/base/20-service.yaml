@@ -1,0 +1,17 @@
+# multistate-agent-svc/base/20-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: multistate-agent-svc
+  namespace: multistate-svc
+  labels:
+    app.kubernetes.io/name: multistate-agent-svc
+    app.kubernetes.io/part-of: multistate
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: multistate-agent-svc
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

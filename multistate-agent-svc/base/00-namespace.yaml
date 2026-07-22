@@ -1,0 +1,8 @@
+# multistate-agent-svc/base/00-namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multistate-svc
+  labels:
+    app.kubernetes.io/part-of: multistate
+    app.kubernetes.io/managed-by: argocd
