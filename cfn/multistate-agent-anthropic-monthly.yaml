@@ -1,0 +1,181 @@
+# cfn/multistate-agent-anthropic-monthly.yaml — W7 D5 Anthropic hard cap.
+# 100% actual breach attaches DenyLlmProxyInvoke to multistate-agent-svc-role.
+#
+# Requires IAM permission budgets:ModifyBudget (+ CreateBudgetAction).
+# If the trainee principal lacks Budgets, deploy with IncludeBudget=false to
+# land the IAM substrate (role + deny policy + BudgetsAction execution role)
+# at CREATE_COMPLETE, then re-deploy with IncludeBudget=true once Budgets
+# access is granted.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Monthly Anthropic budget + AUTOMATIC BudgetsAction for multistate-agent-svc
+
+Parameters:
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 4000
+    Description: Monthly Anthropic budget (USD) for multistate-agent-svc
+  AlarmEmail:
+    Type: String
+    Default: ""
+    Description: Optional email for budget notifications (leave blank to skip subscription)
+  IncludeBudget:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Set false when the deploying principal lacks budgets:ModifyBudget
+
+Conditions:
+  HasAlarmEmail: !Not [!Equals [!Ref AlarmEmail, ""]]
+  CreateBudget: !Equals [!Ref IncludeBudget, "true"]
+
+Resources:
+  AgentBudgetTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: multistate-agent-anthropic-budget
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - {Key: ServiceName, Value: multistate-agent-svc}
+
+  AgentBudgetEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasAlarmEmail
+    Properties:
+      TopicArn: !Ref AgentBudgetTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmail
+
+  DenyLlmProxyInvoke:
+    Type: AWS::IAM::ManagedPolicy
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W13
+            reason: "Explicit deny on llm-proxy / bedrock at budget breach; Resource * is intentional for hard stop"
+          - id: W28
+            reason: "Explicit ManagedPolicyName is referenced by BudgetsAction and BudgetActionRole ArnEquals condition; must stay stable across updates"
+    Properties:
+      ManagedPolicyName: DenyLlmProxyInvoke
+      Description: Explicit-deny llm-proxy invoke; attached by BudgetsAction at 100% actual.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: DenyLlmProxyInvokeOnBudgetCap
+            Effect: Deny
+            Action:
+              - execute-api:Invoke
+              - bedrock:InvokeModel
+            Resource: "*"
+
+  AgentSvcRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit RoleName required for BudgetsAction role targeting and SA annotation"
+    Properties:
+      RoleName: multistate-agent-svc-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: pods.eks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+              - sts:TagSession
+      Tags:
+        - {Key: ServiceName, Value: multistate-agent-svc}
+
+  BudgetActionRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W28
+            reason: "Explicit RoleName keeps Budgets ExecutionRoleArn stable"
+    Properties:
+      RoleName: multistate-agent-budget-action
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: budgets.amazonaws.com}
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: attach-deny-to-agent-role
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                Resource: !GetAtt AgentSvcRole.Arn
+                Condition:
+                  ArnEquals:
+                    "iam:PolicyARN": !Ref DenyLlmProxyInvoke
+
+  AgentAnthropicMonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Condition: CreateBudget
+    Properties:
+      Budget:
+        BudgetName: multistate-agent-anthropic-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetUsd
+          Unit: USD
+        CostFilters:
+          TagKeyValue:
+            - "user:ServiceName$multistate-agent-svc"
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref AgentBudgetTopic
+
+  BudgetHardStop:
+    Type: AWS::Budgets::BudgetsAction
+    Condition: CreateBudget
+    Properties:
+      BudgetName: !Ref AgentAnthropicMonthlyBudget
+      NotificationType: ACTUAL
+      ActionType: APPLY_IAM_POLICY
+      ApprovalModel: AUTOMATIC
+      ExecutionRoleArn: !GetAtt BudgetActionRole.Arn
+      # CFN registry shape (same as multistate-cost-dev.yaml).
+      ActionThreshold:
+        Type: PERCENTAGE
+        Value: 100
+      Definition:
+        IamActionDefinition:
+          PolicyArn: !Ref DenyLlmProxyInvoke
+          Roles:
+            - !Ref AgentSvcRole
+      Subscribers:
+        - Type: SNS
+          Address: !Ref AgentBudgetTopic
+
+Outputs:
+  BudgetName:
+    Condition: CreateBudget
+    Value: !Ref AgentAnthropicMonthlyBudget
+    Export: {Name: !Sub "${AWS::StackName}-BudgetName"}
+  AgentSvcRoleName:
+    Value: !Ref AgentSvcRole
+    Export: {Name: !Sub "${AWS::StackName}-AgentSvcRoleName"}
+  DenyPolicyArn:
+    Value: !Ref DenyLlmProxyInvoke
+    Export: {Name: !Sub "${AWS::StackName}-DenyPolicyArn"}
+  BudgetActionRoleArn:
+    Value: !GetAtt BudgetActionRole.Arn
+    Export: {Name: !Sub "${AWS::StackName}-BudgetActionRoleArn"}
+  IncludeBudget:
+    Value: !Ref IncludeBudget

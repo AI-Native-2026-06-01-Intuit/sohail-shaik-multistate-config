@@ -8,7 +8,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: multistate-api capstone — GitOps overlays + observability
+  description: multistate capstone — API + W7 D5 agent-svc GitOps overlays
 
   sourceRepos:
     - https://github.com/AI-Native-2026-06-01-Intuit/sohail-shaik-multistate-config.git
@@ -20,6 +20,9 @@ spec:
       namespace: multistate-staging
     - server: https://kubernetes.default.svc
       namespace: multistate-prod
+    # W7 D5 — multi-agent service namespace
+    - server: https://kubernetes.default.svc
+      namespace: multistate-svc
 
   # Namespace is the only cluster-scoped kind we allow — required for
   # CreateNamespace=true on each Application. ClusterRole/CRD/PV remain denied.
@@ -69,6 +72,7 @@ spec:
         - p, proj:multistate:developers, applications, get, multistate/*, allow
         - p, proj:multistate:developers, applications, sync, multistate/multistate-api-dev, allow
         - p, proj:multistate:developers, applications, sync, multistate/multistate-api-staging, allow
+        - p, proj:multistate:developers, applications, sync, multistate/multistate-agent-svc, allow
         - p, proj:multistate:developers, applications, delete, multistate/*, deny
         - p, proj:multistate:developers, logs, get, multistate/*, allow
       groups:

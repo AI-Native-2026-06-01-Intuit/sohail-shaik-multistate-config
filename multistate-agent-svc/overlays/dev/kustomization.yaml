@@ -1,0 +1,18 @@
+# multistate-agent-svc/overlays/dev/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: multistate-svc
+
+commonAnnotations:
+  argocd.argoproj.io/sync-wave: "0"
+
+images:
+  - name: uptimecrew/multistate-agent-svc
+    newName: uptimecrew/multistate-agent-svc
+    # Placeholder until app-repo CI pushes the first digest; local k3d can
+    # override with `kubectl set image` / a private registry tag.
+    newTag: pending
