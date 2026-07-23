@@ -17,7 +17,7 @@ commonAnnotations:
 images:
 - name: uptimecrew/multistate-api
   newName: uptimecrew/multistate-api
-  newTag: e8ea7e4bed932bccd28626166e380457f4a1420b
+  newTag: c28d0e10b4c9e70684f413581959962d6ed18f88
 
 # HPA owns replica count (minReplicas: 3). Do NOT pin replicas
 # here — a Kustomize replicas: 1 fights the HPA and flaps the
